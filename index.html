@@ -2471,7 +2471,7 @@ async function drawResidentialNewListing(canvas, ctx) {
   ctx.textAlign = 'center';
   ctx.font = '500 20px "Montserrat", sans-serif';
   ctx.fillStyle = pal.label;
-  ctx.fillText('www.gatewayrealtyadvisors.com  |  712-226-8000', W/2, H - 22);
+  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W/2, H - 22);
 }
 
 async function drawResidentialJustSold(canvas, ctx) {
@@ -2610,7 +2610,7 @@ async function drawResidentialJustSold(canvas, ctx) {
   // Website and phone
   ctx.font = '400 20px "Montserrat", sans-serif';
   ctx.fillStyle = pal.label;
-  ctx.fillText('www.gatewayrealtyadvisors.com  |  712-226-8000', W - 55, H - 50);
+  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W - 55, H - 50);
 }
 
 // ---- Shared helper: draw the residential agent strip + logo + footer ----
@@ -2666,7 +2666,7 @@ async function drawResAgentStrip(ctx, pal, startY, W, H) {
   ctx.textAlign = 'center';
   ctx.font = '500 19px "Montserrat", sans-serif';
   ctx.fillStyle = pal.label;
-  ctx.fillText('www.gatewayrealtyadvisors.com  |  712-226-8000', W/2, H - 18);
+  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W/2, H - 18);
 }
 
 async function drawResidentialUnderContract(canvas, ctx) {
@@ -3598,7 +3598,7 @@ async function drawCommercialTemplate(canvas, ctx, templateName) {
   ctx.textAlign = 'center';
   ctx.font = '400 20px "Montserrat", sans-serif';
   ctx.fillStyle = pal.label;
-  ctx.fillText('www.gatewayrealtyadvisors.com  |  712-226-8000', W/2, H - 28);
+  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W/2, H - 28);
 }
 async function updateSocialPreview() {
   var canvas = document.getElementById('sm-canvas');
@@ -7686,7 +7686,7 @@ function hvBuildPDF() {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor.apply(doc, gray);
-    doc.text('www.gatewayrealtyadvisors.com  |  712-226-8000', W/2, H-42, { align: 'center' });
+    doc.text('www.gatewayreadvisors.com  |  712-226-8000', W/2, H-42, { align: 'center' });
     doc.text('Page 1', W/2, H-20, { align: 'center' });
 
     // ---- PAGE 2: VALUATION SUMMARY ----
@@ -7962,7 +7962,7 @@ async function hvDownloadPPTX() {
     if (fd.agentEmail) s6.addText(fd.agentEmail, { x: 0.5, y: 3.9, w: 9, h: 0.35, fontSize: 13, color: GRAY, align: 'center' });
     s6.addShape(pptx.ShapeType.line, { x: 2, y: 4.4, w: 6, h: 0, line: { color: GOLD, width: 1 } });
     s6.addText('"Opening Doors to Your Future"', { x: 0.5, y: 4.6, w: 9, h: 0.5, fontSize: 16, color: GOLD, italic: true, align: 'center', fontFace: 'Georgia' });
-    s6.addText('www.gatewayrealtyadvisors.com  |  712-226-8000', { x: 0.5, y: 5.8, w: 9, h: 0.35, fontSize: 11, color: GRAY, align: 'center' });
+    s6.addText('www.gatewayreadvisors.com  |  712-226-8000', { x: 0.5, y: 5.8, w: 9, h: 0.35, fontSize: 11, color: GRAY, align: 'center' });
 
     // Download
     var safeName = fd.address.replace(/[^a-zA-Z0-9]/g,'-').replace(/-+/g,'-');
