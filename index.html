@@ -1064,6 +1064,37 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
         </div>
       </div>
 
+      <!-- JUST SOLD COMMERCIAL DETAILS -->
+      <div class="form-section" id="sm-just-sold-fields" style="display:none">
+        <h4>Just Sold Details</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-row"><label>Building Type</label><input type="text" id="sm-js-bldg-type" placeholder="e.g. Multifamily" oninput="updateSocialPreview()"></div>
+          <div class="form-row"><label># of Buildings</label><input type="text" id="sm-js-buildings" placeholder="e.g. 17" oninput="updateSocialPreview()"></div>
+          <div class="form-row"><label>Total Sq Ft</label><input type="text" id="sm-js-sqft" placeholder="e.g. 31,966 SF" oninput="updateSocialPreview()"></div>
+          <div class="form-row"><label>Occupancy at Sale</label><input type="text" id="sm-js-occupancy" placeholder="e.g. 72%" oninput="updateSocialPreview()"></div>
+          <div class="form-row"><label>Close of Escrow</label><input type="text" id="sm-js-close-escrow" placeholder="e.g. March 20, 2026" oninput="updateSocialPreview()"></div>
+          <div class="form-row"><label>Price / SF</label><input type="text" id="sm-js-price-sf" placeholder="e.g. $76.64" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="grid-column:1/-1"><label>Sold Off Market?</label>
+            <select id="sm-js-off-market" onchange="updateSocialPreview()" style="background:#1a2e3b;color:#E4E3D4;border:1px solid #2a4050;padding:6px;border-radius:4px;width:100%">
+              <option value="">No (Standard Sale)</option>
+              <option value="Off Market">Yes — Sold Off Market</option>
+            </select>
+          </div>
+        </div>
+        <h4 style="margin-top:16px;margin-bottom:8px">Unit Mix (optional)</h4>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px">
+          <div class="form-row" style="margin:0"><label style="font-size:11px">Unit Type</label><input type="text" id="sm-js-unit1-label" placeholder="1 BED / 1 BATH" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><label style="font-size:11px">Units</label><input type="text" id="sm-js-unit1-units" placeholder="52" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><label style="font-size:11px">% of Total</label><input type="text" id="sm-js-unit1-pct" placeholder="74%" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><input type="text" id="sm-js-unit2-label" placeholder="2 BED / 1 BATH" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><input type="text" id="sm-js-unit2-units" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><input type="text" id="sm-js-unit2-pct" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><input type="text" id="sm-js-unit3-label" placeholder="3 BED / 2 BATH" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><input type="text" id="sm-js-unit3-units" oninput="updateSocialPreview()"></div>
+          <div class="form-row" style="margin:0"><input type="text" id="sm-js-unit3-pct" oninput="updateSocialPreview()"></div>
+        </div>
+      </div>
+
       <div class="form-section">
         <h4>Agent(s)</h4>
         <div id="sm-agents-container"></div>
@@ -2111,9 +2142,36 @@ function renderSocialAgents() {
           <input type="text" placeholder="License #" value="${a.license}" oninput="smAgents[${i}].license=this.value; updateSocialPreview()" style="grid-column:1/-1">
         </div>
       </div>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <button class="btn-sm" style="font-size:12px;padding:4px 10px;background:#1E3040;border:1px solid #C8A84B;color:#C8A84B" onclick="saveAgentPreset(${i})">💾 Save Agent</button>
+        <select style="flex:1;font-size:12px;padding:4px 8px;background:#1E3040;color:#E4E3D4;border:1px solid #2a4050;border-radius:4px" onchange="loadAgentPreset(${i}, this)">
+          <option value="">Load saved agent…</option>
+          ${(JSON.parse(localStorage.getItem('gw_saved_agents')||'[]')).map(p=>`<option value="${encodeURIComponent(JSON.stringify(p))}">${p.name}</option>`).join('')}
+        </select>
+      </div>
     `;
     c.appendChild(card);
   });
+}
+
+function saveAgentPreset(i) {
+  var a = smAgents[i];
+  if (!a.name) { alert('Enter an agent name first.'); return; }
+  var saved = JSON.parse(localStorage.getItem('gw_saved_agents') || '[]');
+  var idx = saved.findIndex(function(p){ return p.name === a.name; });
+  var preset = { name: a.name, title: a.title, phone: a.phone, email: a.email, license: a.license };
+  if (idx >= 0) saved[idx] = preset; else saved.push(preset);
+  localStorage.setItem('gw_saved_agents', JSON.stringify(saved));
+  renderSocialAgents();
+  alert('Agent "' + a.name + '" saved!');
+}
+
+function loadAgentPreset(i, sel) {
+  if (!sel.value) return;
+  var p = JSON.parse(decodeURIComponent(sel.value));
+  smAgents[i] = Object.assign(smAgents[i], p);
+  renderSocialAgents();
+  updateSocialPreview();
 }
 
 function handleSocialAgentPhoto(index, input) {
@@ -2218,6 +2276,7 @@ function onTemplateChange() {
   var val = document.getElementById('sm-heading').value;
   var isResidential = val.startsWith('res-');
   var isNewCommercial = ['For Lease','Just Leased','Price Reduced','Investment Opportunity'].indexOf(val) !== -1;
+  var isJustSold = (val === 'Just Sold');
   var resFields = document.getElementById('sm-residential-fields');
   var commFields = document.getElementById('sm-commercial-fields');
   var metricsSection = document.getElementById('sm-metrics-grid');
@@ -2226,6 +2285,8 @@ function onTemplateChange() {
   if (commFields) commFields.style.display = isNewCommercial ? 'block' : 'none';
   if (metricsSection) metricsSection.style.display = isResidential ? 'none' : '';
   if (metricsValues) metricsValues.style.display = isResidential ? 'none' : '';
+  var jsSoldFields = document.getElementById('sm-just-sold-fields');
+  if (jsSoldFields) jsSoldFields.style.display = isJustSold ? 'block' : 'none';
   updateSocialPreview();
 }
 
@@ -2357,15 +2418,15 @@ async function drawResidentialNewListing(canvas, ctx) {
         } catch(e) {}
       }
       var tX = ag.photo ? agX + 96 : agX;
-      ctx.font = '700 26px "Montserrat", sans-serif';
+      ctx.font = '700 29px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
-      ctx.fillText(ag.name, tX, agentY + 26);
-      ctx.font = '400 19px "Montserrat", sans-serif';
+      ctx.fillText(ag.name, tX, agentY + 29);
+      ctx.font = '400 22px "Montserrat", sans-serif';
       ctx.fillStyle = pal.accent;
-      if (ag.title) ctx.fillText(ag.title, tX, agentY + 50);
-      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 72);
-      if (ag.email) { ctx.font = '400 17px "Montserrat"'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, agentY + 93); }
-      if (ag.license) { ctx.font = '400 15px "Montserrat"'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 112); }
+      if (ag.title) ctx.fillText(ag.title, tX, agentY + 56);
+      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 82);
+      if (ag.email) { ctx.font = '400 20px "Montserrat"'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, agentY + 106); }
+      if (ag.license) { ctx.font = '400 18px "Montserrat"'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 128); }
     }
     agentY += 118;
   }
@@ -2484,16 +2545,16 @@ async function drawResidentialJustSold(canvas, ctx) {
         } catch(e) {}
       }
       var tX = ag.photo ? agX + 90 : agX;
-      ctx.font = '700 24px "Montserrat", sans-serif';
+      ctx.font = '700 27px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
       ctx.textAlign = 'left';
-      ctx.fillText(ag.name, tX, agentY + 24);
-      ctx.font = '400 18px "Montserrat", sans-serif';
+      ctx.fillText(ag.name, tX, agentY + 27);
+      ctx.font = '400 21px "Montserrat", sans-serif';
       ctx.fillStyle = pal.accent;
-      if (ag.title) ctx.fillText(ag.title, tX, agentY + 47);
-      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 68);
-      if (ag.email) { ctx.font = '400 16px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, agentY + 88); }
-      if (ag.license) { ctx.font = '400 14px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 106); }
+      if (ag.title) ctx.fillText(ag.title, tX, agentY + 53);
+      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 78);
+      if (ag.email) { ctx.font = '400 19px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, agentY + 101); }
+      if (ag.license) { ctx.font = '400 17px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 122); }
     }
     agentY += 112;
   }
@@ -2550,17 +2611,17 @@ async function drawResAgentStrip(ctx, pal, startY, W, H) {
         } catch(e) {}
       }
       var tX = ag.photo ? agX + 88 : agX;
-      ctx.font = '700 24px "Montserrat", sans-serif';
+      ctx.font = '700 27px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
-      ctx.fillText(ag.name, tX, agentY + 24);
-      ctx.font = '400 18px "Montserrat", sans-serif';
+      ctx.fillText(ag.name, tX, agentY + 27);
+      ctx.font = '400 21px "Montserrat", sans-serif';
       ctx.fillStyle = pal.accent;
-      if (ag.title) ctx.fillText(ag.title, tX, agentY + 47);
-      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 68);
-      if (ag.email) { ctx.font = '400 16px Montserrat'; ctx.fillText(ag.email, tX, agentY + 88); }
-      if (ag.license) { ctx.font = '400 14px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 106); }
+      if (ag.title) ctx.fillText(ag.title, tX, agentY + 53);
+      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 78);
+      if (ag.email) { ctx.font = '400 19px Montserrat'; ctx.fillText(ag.email, tX, agentY + 101); }
+      if (ag.license) { ctx.font = '400 17px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 122); }
     }
-    agentY += 114;
+    agentY += 130;
   }
   // Logo centered below agents
   try {
@@ -2912,6 +2973,332 @@ async function drawResidentialComingSoon(canvas, ctx) {
   await drawResAgentStrip(ctx, pal, stripY + 18, W, H);
 }
 
+async function drawJustSoldTemplate(canvas, ctx) {
+  var W = canvas.width, H = canvas.height;
+  var pal = PALETTES[smPalette] || PALETTES.navy;
+  var NAVY  = pal.bg1;
+  var CREAM = pal.text;
+  var GOLD  = '#C8A84B';
+  var LABEL = pal.label;
+
+  // helper: val from element
+  function gv(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+
+  // Read form data
+  var propName    = gv('sm-prop-name');
+  var address     = gv('sm-address');
+  var price       = gv('sm-price');
+  var offMkt      = gv('sm-js-off-market');
+  var bldgType    = gv('sm-js-bldg-type');
+  var buildings   = gv('sm-js-buildings');
+  var sqft        = gv('sm-js-sqft');
+  var occupancy   = gv('sm-js-occupancy');
+  var closeEscrow = gv('sm-js-close-escrow');
+  var priceSF     = gv('sm-js-price-sf');
+  var priceUnit   = gv('sm-price-unit');
+  var units       = gv('sm-units');
+  var cap         = gv('sm-cap');
+  var yearBuilt   = gv('sm-year-built');
+  var noi         = gv('sm-noi');
+
+  // Unit mix
+  var unitMix = [];
+  for (var um = 1; um <= 3; um++) {
+    var lbl = gv('sm-js-unit' + um + '-label');
+    var unt = gv('sm-js-unit' + um + '-units');
+    var pct = gv('sm-js-unit' + um + '-pct');
+    if (lbl && unt) unitMix.push({ label: lbl, units: unt, pct: pct });
+  }
+
+  // ── Section 1: Navy header (0 → headerH) ───────────────────────────────
+  var headerH = 440;
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, W, headerH);
+
+  // Top accent line
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, 0, W, 6);
+
+  // Gateway text logo (left)
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 34px "Montserrat", sans-serif';
+  ctx.fillStyle = CREAM;
+  ctx.fillText('GATEWAY', 60, 62);
+  ctx.font = '400 12px "Montserrat", sans-serif';
+  ctx.fillStyle = LABEL;
+  ctx.fillText('REAL ESTATE ADVISORS', 60, 82);
+
+  // Just Sold box (right)
+  var boxW = 290, boxH = offMkt ? 90 : 72, boxX = W - 60 - boxW, boxY = 28;
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+  ctx.font = '600 13px "Montserrat", sans-serif';
+  ctx.fillStyle = LABEL;
+  ctx.textAlign = 'center';
+  ctx.fillText('JUST SOLD', boxX + boxW / 2, boxY + 20);
+  ctx.font = 'bold 34px "Montserrat", sans-serif';
+  ctx.fillStyle = GOLD;
+  ctx.fillText(price || '$0', boxX + boxW / 2, boxY + 54);
+  if (offMkt) {
+    ctx.font = '500 11px "Montserrat", sans-serif';
+    ctx.fillStyle = LABEL;
+    ctx.fillText('SOLD ' + offMkt.toUpperCase(), boxX + boxW / 2, boxY + 74);
+  }
+
+  // Separator
+  ctx.strokeStyle = GOLD + '55';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(60, 110); ctx.lineTo(W - 60, 110); ctx.stroke();
+
+  // Property label
+  ctx.textAlign = 'left';
+  ctx.font = '600 11px "Montserrat", sans-serif';
+  ctx.fillStyle = LABEL;
+  ctx.fillText('PROPERTY', 60, 136);
+
+  // Property name
+  if (propName) {
+    ctx.font = 'bold 36px "Montserrat", sans-serif';
+    ctx.fillStyle = CREAM;
+    ctx.fillText(propName, 60, 172);
+  }
+  // Street address
+  if (address) {
+    ctx.font = '400 20px "Montserrat", sans-serif';
+    ctx.fillStyle = LABEL;
+    ctx.fillText(address, 60, 200);
+  }
+
+  // 4 metric boxes row
+  var boxTop = 222;
+  var metrics4 = [
+    { label: 'TOTAL UNITS', val: units || '—' },
+    { label: 'PRICE / UNIT', val: priceUnit || (price || '—') },
+    { label: 'CAP RATE', val: cap || '—' },
+    { label: 'YEAR BUILT', val: yearBuilt || '—' }
+  ];
+  var mbW = (W - 120 - 3 * 12) / 4;
+  metrics4.forEach(function(m, mi) {
+    var mx = 60 + mi * (mbW + 12);
+    ctx.strokeStyle = GOLD + '88';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(mx, boxTop, mbW, 86);
+    ctx.font = '600 11px "Montserrat", sans-serif';
+    ctx.fillStyle = LABEL;
+    ctx.textAlign = 'center';
+    ctx.fillText(m.label, mx + mbW / 2, boxTop + 20);
+    ctx.font = 'bold 26px "Montserrat", sans-serif';
+    ctx.fillStyle = CREAM;
+    ctx.fillText(m.val, mx + mbW / 2, boxTop + 56);
+  });
+  ctx.textAlign = 'left';
+
+  // ── Section 2: Hero photo (headerH → photoBottom) ──────────────────────
+  var photoY = headerH + 2;
+  var photoH = 290;
+  var photoBottom = photoY + photoH;
+  var photoSrc = smPhotos[0];
+  if (photoSrc) {
+    try {
+      var img = await loadImageAsync(photoSrc);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, photoY, W, photoH);
+      ctx.clip();
+      var scale = Math.max(W / img.width, photoH / img.height);
+      var dw = img.width * scale, dh = img.height * scale;
+      ctx.drawImage(img, (W - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
+      ctx.restore();
+    } catch(e) {}
+  } else {
+    ctx.fillStyle = '#2a3e4e';
+    ctx.fillRect(0, photoY, W, photoH);
+    ctx.fillStyle = LABEL;
+    ctx.textAlign = 'center';
+    ctx.font = '24px Montserrat';
+    ctx.fillText('Property Photo', W / 2, photoY + photoH / 2);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Section 3: Data columns (cream bg) ─────────────────────────────────
+  var dataY = photoBottom;
+  // Calculate section heights
+  var overviewRows = [];
+  if (bldgType)    overviewRows.push({ k: 'Building type', v: bldgType });
+  if (buildings)   overviewRows.push({ k: 'Buildings', v: buildings });
+  if (units)       overviewRows.push({ k: 'Total units', v: units });
+  if (sqft)        overviewRows.push({ k: 'Total sq ft', v: sqft });
+  if (occupancy)   overviewRows.push({ k: 'Occupancy at sale', v: occupancy });
+  if (closeEscrow) overviewRows.push({ k: 'Close of escrow', v: closeEscrow });
+
+  var financialRows = [];
+  if (price)    financialRows.push({ k: 'Sale price', v: price });
+  if (priceUnit) financialRows.push({ k: 'Price / unit', v: priceUnit });
+  if (priceSF)  financialRows.push({ k: 'Price / SF', v: priceSF });
+  if (noi)      financialRows.push({ k: 'NOI', v: noi });
+  if (cap)      financialRows.push({ k: 'Cap rate', v: cap });
+  if (offMkt)   financialRows.push({ k: 'Off market', v: 'Yes' });
+
+  var dataBg = (pal.logoKey === 'dark') ? '#f0ede6' : '#1a2e3b';
+  var dataTextMain = (pal.logoKey === 'dark') ? '#1E2F39' : '#E4E3D4';
+  var dataTextSub  = (pal.logoKey === 'dark') ? '#4a5a66' : '#8aA4B4';
+  var divColor     = (pal.logoKey === 'dark') ? '#d0cbc2' : '#2a4050';
+  var rowH = 34;
+  var maxRows = Math.max(overviewRows.length, financialRows.length, 1);
+  var dataH = 52 + maxRows * rowH + (unitMix.length > 0 ? 56 + unitMix.length * 64 : 0) + 16;
+
+  ctx.fillStyle = dataBg;
+  ctx.fillRect(0, dataY, W, dataH);
+
+  // Column headers
+  var colW = (W - 120) / 2;
+  var colL = 60, colR = 60 + colW + 20;
+  var headerY = dataY + 28;
+  ctx.font = '700 12px "Montserrat", sans-serif';
+  ctx.fillStyle = dataTextSub;
+  ctx.textAlign = 'left';
+  ctx.fillText('PROPERTY OVERVIEW', colL, headerY);
+  ctx.fillText('FINANCIAL SUMMARY', colR, headerY);
+
+  // Column divider
+  ctx.strokeStyle = divColor;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(colL + colW + 10, dataY + 12);
+  ctx.lineTo(colL + colW + 10, dataY + dataH - 12);
+  ctx.stroke();
+
+  var rowStartY = headerY + 18;
+  // Render rows
+  var maxR = Math.max(overviewRows.length, financialRows.length);
+  for (var ri = 0; ri < maxR; ri++) {
+    var rowY2 = rowStartY + ri * rowH;
+    // Divider
+    ctx.strokeStyle = divColor;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(colL, rowY2 - 4); ctx.lineTo(colL + colW, rowY2 - 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(colR, rowY2 - 4); ctx.lineTo(colR + colW - 20, rowY2 - 4); ctx.stroke();
+    if (overviewRows[ri]) {
+      ctx.font = '400 16px "Montserrat", sans-serif';
+      ctx.fillStyle = dataTextSub;
+      ctx.textAlign = 'left';
+      ctx.fillText(overviewRows[ri].k, colL, rowY2 + 18);
+      ctx.font = '600 16px "Montserrat", sans-serif';
+      ctx.fillStyle = dataTextMain;
+      ctx.textAlign = 'right';
+      ctx.fillText(overviewRows[ri].v, colL + colW, rowY2 + 18);
+    }
+    if (financialRows[ri]) {
+      ctx.font = '400 16px "Montserrat", sans-serif';
+      ctx.fillStyle = dataTextSub;
+      ctx.textAlign = 'left';
+      ctx.fillText(financialRows[ri].k, colR, rowY2 + 18);
+      ctx.font = '600 16px "Montserrat", sans-serif';
+      ctx.fillStyle = dataTextMain;
+      ctx.textAlign = 'right';
+      ctx.fillText(financialRows[ri].v, colR + colW - 20, rowY2 + 18);
+    }
+  }
+
+  // Unit Mix
+  var umY = rowStartY + maxR * rowH + 18;
+  if (unitMix.length > 0) {
+    ctx.font = '700 11px "Montserrat", sans-serif';
+    ctx.fillStyle = dataTextSub;
+    ctx.textAlign = 'left';
+    ctx.fillText('UNIT MIX', colL, umY);
+    umY += 14;
+    var umW = (W - 120 - (unitMix.length - 1) * 14) / unitMix.length;
+    unitMix.forEach(function(um2, umi) {
+      var umX2 = colL + umi * (umW + 14);
+      ctx.strokeStyle = divColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(umX2, umY, umW, 58);
+      ctx.font = '700 15px "Montserrat", sans-serif';
+      ctx.fillStyle = dataTextMain;
+      ctx.textAlign = 'left';
+      ctx.fillText(um2.label, umX2 + 12, umY + 22);
+      ctx.font = '400 13px "Montserrat", sans-serif';
+      ctx.fillStyle = dataTextSub;
+      ctx.fillText(um2.units + ' units' + (um2.pct ? '  \u2022  ' + um2.pct + ' of portfolio' : ''), umX2 + 12, umY + 42);
+    });
+    umY += 68;
+  }
+
+  // ── Section 4: Navy footer ──────────────────────────────────────────────
+  var footerY = dataY + dataH;
+  var footerH = H - footerY;
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, footerY, W, footerH);
+
+  // Footer top accent
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, footerY, W, 3);
+
+  var fY = footerY + 44;
+  // Agent info (left)
+  if (smAgents.length > 0 && smAgents[0].name) {
+    var ag3 = smAgents[0];
+    if (ag3.photo) {
+      try {
+        var agImg3 = await loadImageAsync(ag3.photo);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(60 + 32, fY + 32, 32, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(agImg3, 60, fY, 64, 64);
+        ctx.restore();
+        ctx.strokeStyle = GOLD;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(60 + 32, fY + 32, 32, 0, Math.PI * 2);
+        ctx.stroke();
+        fY += 6;
+      } catch(e3) {}
+    }
+    var ftX = ag3.photo ? 138 : 60;
+    ctx.font = '400 13px "Montserrat", sans-serif';
+    ctx.fillStyle = LABEL;
+    ctx.textAlign = 'left';
+    ctx.fillText('REPRESENTED BY', ftX, fY);
+    ctx.font = 'bold 26px "Montserrat", sans-serif';
+    ctx.fillStyle = CREAM;
+    ctx.fillText(ag3.name.toUpperCase(), ftX, fY + 30);
+    if (ag3.title) {
+      ctx.font = '400 16px "Montserrat", sans-serif';
+      ctx.fillStyle = LABEL;
+      ctx.fillText(ag3.title.toUpperCase(), ftX, fY + 52);
+    }
+    if (ag3.phone || ag3.email) {
+      ctx.font = '400 15px "Montserrat", sans-serif';
+      ctx.fillStyle = LABEL;
+      if (ag3.phone) ctx.fillText(ag3.phone, ftX, fY + 74);
+      if (ag3.email) ctx.fillText(ag3.email, ftX, fY + 96);
+    }
+  }
+
+  // Company info (right)
+  ctx.textAlign = 'right';
+  ctx.font = 'bold 20px "Montserrat", sans-serif';
+  ctx.fillStyle = CREAM;
+  ctx.fillText('GATEWAY REAL ESTATE ADVISORS', W - 60, footerY + 44);
+  ctx.font = '400 15px "Montserrat", sans-serif';
+  ctx.fillStyle = LABEL;
+  ctx.fillText('gatewayrealtyadvisors.com', W - 60, footerY + 68);
+  ctx.fillText('info@gatewayrealtyadvisors.com', W - 60, footerY + 90);
+  ctx.fillText('700 Nebraska St  \u2022  Sioux City, IA 51101', W - 60, footerY + 112);
+
+  // Gateway logo small — bottom right corner
+  try {
+    var logoSrc3 = (pal.logoKey === 'dark') ? (LOGO_ROUND_SUBMARK || '') : (LOGO_CIRCLE_LIGHT || '');
+    if (logoSrc3) {
+      var logoImg3 = await loadImageAsync(logoSrc3);
+      ctx.drawImage(logoImg3, W - 60 - 90, H - 90 - 20, 90, 90);
+    }
+  } catch(e) {}
+}
+
 async function drawCommercialTemplate(canvas, ctx, templateName) {
   var W = canvas.width, H = canvas.height;
   var pal = PALETTES[smPalette] || PALETTES.navy;
@@ -3138,17 +3525,17 @@ async function drawCommercialTemplate(canvas, ctx, templateName) {
         } catch(e2) {}
       }
       var tX2 = ag2.photo ? agX2 + 76 : agX2;
-      ctx.font = '700 20px "Montserrat", sans-serif';
+      ctx.font = '700 23px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
       ctx.textAlign = 'left';
-      ctx.fillText(ag2.name, tX2, agentY + 18);
-      ctx.font = '400 15px "Montserrat", sans-serif';
+      ctx.fillText(ag2.name, tX2, agentY + 22);
+      ctx.font = '400 18px "Montserrat", sans-serif';
       ctx.fillStyle = accent;
-      if (ag2.title)   ctx.fillText(ag2.title,   tX2, agentY + 36);
+      if (ag2.title)   ctx.fillText(ag2.title,   tX2, agentY + 44);
       ctx.fillStyle = pal.accent;
-      if (ag2.phone)   ctx.fillText(ag2.phone,   tX2, agentY + 53);
-      if (ag2.email) { ctx.font = '400 13px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag2.email, tX2, agentY + 69); }
-      if (ag2.license) { ctx.font = '400 12px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag2.license, tX2, agentY + 84); }
+      if (ag2.phone)   ctx.fillText(ag2.phone,   tX2, agentY + 65);
+      if (ag2.email) { ctx.font = '400 16px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag2.email, tX2, agentY + 84); }
+      if (ag2.license) { ctx.font = '400 15px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag2.license, tX2, agentY + 102); }
     }
   }
 
@@ -3182,6 +3569,8 @@ async function updateSocialPreview() {
   if (heading === 'res-open-house') { await drawResidentialOpenHouse(canvas, ctx); return; }
   if (heading === 'res-price-reduced') { await drawResidentialPriceReduced(canvas, ctx); return; }
   if (heading === 'res-coming-soon') { await drawResidentialComingSoon(canvas, ctx); return; }
+  // Just Sold commercial template
+  if (heading === 'Just Sold') { await drawJustSoldTemplate(canvas, ctx); return; }
   // New commercial templates
   if (['For Lease','Just Leased','Price Reduced','Investment Opportunity'].indexOf(heading) !== -1) {
     await drawCommercialTemplate(canvas, ctx, heading);
