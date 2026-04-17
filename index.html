@@ -9502,28 +9502,44 @@ window.initHomeValuation = initHomeValuation;
         body:JSON.stringify({ref:branch,inputs:{output_slug:comp.slug,composition_path:compPath,music_path:musicPath}})
       });
       if (!dispatchRes.ok&&dispatchRes.status!==204) { var de=await dispatchRes.json(); throw new Error('Dispatch failed: '+(de.message||dispatchRes.status)); }
-      vidSetStatus('rendering','Rendering on GitHub Actions... (~2 min)');
+      vidSetStatus('rendering','Rendering on GitHub Actions... (~3-5 min)');
       var startMs=Date.now();
-      await new Promise(function(resolve,reject){
+      var triggerMs=new Date(triggerTime).getTime();
+      var dlUrl=await new Promise(function(resolve,reject){
         var pollCount=0,elapsed=0;
         vidPollTimer=setInterval(async function(){
           pollCount++; elapsed=Math.round((Date.now()-startMs)/1000);
-          if (pollCount>60){clearInterval(vidPollTimer);reject(new Error('Timed out. Check GitHub Actions.'));return;}
+          if (pollCount>100){clearInterval(vidPollTimer);reject(new Error('Timed out after 20 min. Check GitHub Actions for details.'));return;}
           try {
-            var runsRes=await fetch('https://api.github.com/repos/'+VID_REPO+'/actions/runs?event=workflow_dispatch&per_page=10',{
+            var runsRes=await fetch('https://api.github.com/repos/'+VID_REPO+'/actions/runs?event=workflow_dispatch&per_page=20',{
               headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}
             });
             var rd=await runsRes.json();
-            var run=(rd.workflow_runs||[]).find(function(r){return r.name==='Render Listing Video'&&new Date(r.created_at)>=new Date(triggerTime);});
+            var run=(rd.workflow_runs||[]).find(function(r){
+              return r.name==='Render Listing Video'&&new Date(r.created_at).getTime()>=triggerMs-10000;
+            });
             if (!run){vidSetStatus('rendering','Waiting for runner... ('+elapsed+'s)');return;}
             if (run.status!=='completed'){vidSetStatus('rendering','Rendering... ('+elapsed+'s)');return;}
             clearInterval(vidPollTimer);
             if (run.conclusion==='success'){
-              resolve({url:'https://raw.githubusercontent.com/'+VID_REPO+'/'+branch+'/renders/'+comp.slug+'.mp4',elapsed:elapsed,slug:comp.slug});
+              vidSetStatus('rendering','Verifying download... ('+elapsed+'s)');
+              var rawUrl='https://raw.githubusercontent.com/'+VID_REPO+'/'+branch+'/renders/'+comp.slug+'.mp4';
+              var resolvedUrl=rawUrl;
+              for (var vi=0;vi<15;vi++){
+                await new Promise(function(r){setTimeout(r,3000);});
+                try {
+                  var ck=await fetch('https://api.github.com/repos/'+VID_REPO+'/contents/renders/'+comp.slug+'.mp4?ref='+branch,{
+                    headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}
+                  });
+                  if (ck.ok){var ckd=await ck.json();resolvedUrl=ckd.download_url||rawUrl;break;}
+                } catch(e2){}
+              }
+              resolve({url:resolvedUrl,elapsed:elapsed,slug:comp.slug});
             } else { reject(new Error('Workflow ended: '+run.conclusion)); }
           } catch(pe){}
         },12000);
-      }).then(function(r){vidSetStatus('success','Video ready!',r);});
+      });
+      vidSetStatus('success','Video ready!',dlUrl);
     } catch(e){ vidSetStatus('error',e.message,{msg:e.message}); }
     finally { btn.disabled=false; }
   };
