@@ -4992,16 +4992,32 @@ function getBufferToken() {
   return localStorage.getItem('buffer_access_token') || '';
 }
 
-// Buffer's v1 API blocks browser requests via CORS. Try direct first;
-// if the browser throws a network error (CORS), retry through a proxy.
+// Buffer's v1 API blocks direct browser requests (CORS). Try direct first,
+// then fall through multiple proxy services until one works.
 async function bufferFetch(url, options) {
-  try {
-    var r = await fetch(url, options);
-    return r;
-  } catch(directErr) {
-    var proxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
-    return fetch(proxy, options);
+  var isPost = !!(options && options.method && options.method.toUpperCase() === 'POST');
+
+  // 1. Direct request
+  try { return await fetch(url, options); } catch(e) {}
+
+  // 2. allorigins.win — very reliable for GET, returns raw body
+  if (!isPost) {
+    try { return await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url)); } catch(e) {}
   }
+
+  // 3. corsproxy.io — supports GET and POST
+  try { return await fetch('https://corsproxy.io/?' + encodeURIComponent(url), options); } catch(e) {}
+
+  // 4. cors-anywhere (Heroku demo) — last resort for POST
+  if (isPost) {
+    try {
+      var hdrs = Object.assign({'X-Requested-With': 'XMLHttpRequest'}, (options.headers || {}));
+      return await fetch('https://cors-anywhere.herokuapp.com/' + url,
+        Object.assign({}, options, {headers: hdrs}));
+    } catch(e) {}
+  }
+
+  throw new Error('Buffer API unreachable — all proxy routes failed');
 }
 
 async function testBufferConnection() {
@@ -5019,8 +5035,13 @@ async function testBufferConnection() {
   statusText.style.color = '#C8A84B';
   try {
     var resp = await bufferFetch('https://api.bufferapp.com/1/user.json?access_token=' + encodeURIComponent(token));
-    if (!resp.ok) { handleBufferError({status: resp.status}, 'connection'); return; }
-    var data = await resp.json();
+    var data;
+    try { data = await resp.json(); } catch(je) { data = {}; }
+    // allorigins returns 200 even for Buffer errors — detect by checking for known error fields
+    if ((!resp.ok) || data.code === 1010 || data.error) {
+      handleBufferError({status: resp.status || data.code, message: data.error}, 'connection');
+      return;
+    }
     localStorage.setItem('buffer_access_token', token);
     if (tokenInput) tokenInput.style.display = 'none';
     dot.className = 'buffer-dot on';
@@ -5031,7 +5052,11 @@ async function testBufferConnection() {
     if (refreshBtn) refreshBtn.style.display = 'inline-block';
     await loadBufferProfiles(token);
   } catch(e) {
-    handleBufferError({message: e.message}, 'connection');
+    // All proxy routes failed — show manual fallback
+    if (dot) dot.className = 'buffer-dot off';
+    statusText.textContent = '⚠️ Buffer API unreachable — use manual mode below';
+    statusText.style.color = '#E74C3C';
+    showBufferManualFallback();
   }
 }
 
@@ -5164,7 +5189,7 @@ function handleBufferError(error, context) {
   var dot = document.getElementById('buffer-dot');
   var statusText = document.getElementById('buffer-status-text');
   var msg;
-  if (error && error.status === 401) msg = '⚠️ Buffer: Invalid API token — double-check your token';
+  if (error && (error.status === 401 || error.status === 1010)) msg = '⚠️ Buffer: Invalid API token — double-check your token';
   else if (error && error.status === 403) msg = '⚠️ Buffer: Access denied (403)';
   else if (error && error.status === 429) msg = '⚠️ Buffer: Rate limit hit — try again in a moment';
   else if (error && error.status === 404) msg = '⚠️ Buffer: Endpoint not found (404)';
@@ -5174,6 +5199,26 @@ function handleBufferError(error, context) {
   if (dot) dot.className = 'buffer-dot off';
   if (statusText) { statusText.textContent = msg; statusText.style.color = '#E74C3C'; }
   showGlobalStatus(msg);
+}
+
+function showBufferManualFallback() {
+  var caption = (document.getElementById('sm-caption') || {}).value || '';
+  var heading = (document.getElementById('sm-heading') || {}).value || '';
+  if (!caption) caption = (heading ? heading + ' — ' : '') + 'Listed by Gateway Real Estate Advisors | Sioux City, IA';
+  var wrap = document.getElementById('buffer-profiles-wrap');
+  if (!wrap) return;
+  wrap.classList.add('show');
+  wrap.innerHTML =
+    '<div style="background:#1a1a0e;border:1px solid #C8A84B44;border-radius:8px;padding:12px 14px;margin-bottom:8px">' +
+      '<div style="font-size:11px;color:#C8A84B;font-weight:700;letter-spacing:1px;margin-bottom:6px">MANUAL POSTING MODE</div>' +
+      '<div style="font-size:11px;color:#7a9aaa;margin-bottom:8px">Buffer\'s API is blocked by your browser\'s security policy. Copy your post text and schedule it directly in Buffer.</div>' +
+      '<textarea id="buffer-manual-caption" rows="4" style="width:100%;background:#0e1e28;border:1px solid #2a4050;border-radius:6px;color:#E4E3D4;font-size:12px;padding:8px;resize:vertical;box-sizing:border-box">' + caption.replace(/</g,'&lt;') + '</textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' +
+        '<button class="buffer-btn" onclick="(function(){var t=document.getElementById(\'buffer-manual-caption\');if(t){navigator.clipboard.writeText(t.value).then(function(){showGlobalStatus(\'✅ Caption copied!\')});}})()">📋 Copy Caption</button>' +
+        '<button class="buffer-btn" onclick="window.open(\'https://publish.buffer.com\',\'_blank\')">Open Buffer →</button>' +
+        '<button class="buffer-btn" onclick="var c=document.getElementById(\'sm-canvas\');if(c){var a=document.createElement(\'a\');a.download=\'post.png\';a.href=c.toDataURL(\'image/png\');a.click();}">⬇ Download Image</button>' +
+      '</div>' +
+    '</div>';
 }
 
 // ===================================================================
