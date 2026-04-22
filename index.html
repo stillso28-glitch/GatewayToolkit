@@ -1425,7 +1425,8 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
   <div class="buffer-bar" id="buffer-bar">
     <div class="buffer-dot off" id="buffer-dot"></div>
     <span class="buffer-status-text" id="buffer-status-text" style="color:#7a9aaa">Buffer not connected</span>
-    <button class="buffer-btn" id="buffer-connect-btn" onclick="testBufferConnection()">Connect Buffer</button>
+    <input type="password" id="buffer-token-input" placeholder="Paste Buffer access token…" style="flex:1;min-width:180px;padding:4px 10px;background:#0e2030;border:1px solid #2a4050;border-radius:6px;color:#C8D8E0;font-size:12px;">
+    <button class="buffer-btn" id="buffer-connect-btn" onclick="testBufferConnection()">Connect</button>
     <button class="buffer-btn" id="buffer-refresh-btn" style="display:none" onclick="loadBufferProfiles()">↻ Refresh</button>
   </div>
 
@@ -4983,22 +4984,33 @@ function downloadSocialSquare() {
 // BUFFER API INTEGRATION
 // ===================================================================
 
+function getBufferToken() {
+  var inputEl = document.getElementById('buffer-token-input');
+  var fromInput = inputEl ? inputEl.value.trim() : '';
+  if (fromInput) return fromInput;
+  if (window.CONFIG && window.CONFIG.bufferAccessToken) return window.CONFIG.bufferAccessToken;
+  return localStorage.getItem('buffer_access_token') || '';
+}
+
 async function testBufferConnection() {
-  var token = (window.CONFIG && window.CONFIG.bufferAccessToken) ? window.CONFIG.bufferAccessToken : '';
+  var token = getBufferToken();
   if (!token) {
-    showGlobalStatus('⚠️ Buffer API key not found in config.js');
+    showGlobalStatus('⚠️ Paste your Buffer access token above and click Connect');
     return;
   }
   var dot = document.getElementById('buffer-dot');
   var statusText = document.getElementById('buffer-status-text');
   var connectBtn = document.getElementById('buffer-connect-btn');
   var refreshBtn = document.getElementById('buffer-refresh-btn');
+  var tokenInput = document.getElementById('buffer-token-input');
   statusText.textContent = 'Connecting...';
   statusText.style.color = '#C8A84B';
   try {
     var resp = await fetch('https://api.bufferapp.com/1/user.json?access_token=' + encodeURIComponent(token));
     if (!resp.ok) { handleBufferError({status: resp.status}, 'connection'); return; }
     var data = await resp.json();
+    localStorage.setItem('buffer_access_token', token);
+    if (tokenInput) tokenInput.style.display = 'none';
     dot.className = 'buffer-dot on';
     statusText.textContent = 'Connected as ' + (data.name || data.email || 'Buffer User');
     statusText.style.color = '#27AE60';
@@ -5012,7 +5024,7 @@ async function testBufferConnection() {
 }
 
 async function loadBufferProfiles(token) {
-  token = token || (window.CONFIG && window.CONFIG.bufferAccessToken) || '';
+  token = token || getBufferToken();
   if (!token) return;
   try {
     var resp = await fetch('https://api.bufferapp.com/1/profiles.json?access_token=' + encodeURIComponent(token));
@@ -5040,8 +5052,8 @@ async function loadBufferProfiles(token) {
 }
 
 async function schedulePostToBuffer(sendNow) {
-  var token = (window.CONFIG && window.CONFIG.bufferAccessToken) || '';
-  if (!token) { showGlobalStatus('⚠️ Buffer not connected'); return; }
+  var token = getBufferToken();
+  if (!token) { showGlobalStatus('⚠️ Buffer not connected — paste your token and click Connect'); return; }
   var caption = (document.getElementById('sm-caption') || {}).value || '';
   var heading = (document.getElementById('sm-heading') || {}).value || 'Property';
   if (!caption) caption = heading + ' — Listed by Gateway Real Estate Advisors | Sioux City, IA';
@@ -10833,6 +10845,11 @@ window.initHomeValuation = initHomeValuation;
 
 document.addEventListener('DOMContentLoaded', function() {
   loadScheduledPosts();
+  var savedToken = (window.CONFIG && window.CONFIG.bufferAccessToken) || localStorage.getItem('buffer_access_token') || '';
+  var tokenInput = document.getElementById('buffer-token-input');
+  if (tokenInput && savedToken) {
+    tokenInput.value = savedToken;
+  }
 });
 </script>
 </body>
