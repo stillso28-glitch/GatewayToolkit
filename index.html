@@ -4310,9 +4310,9 @@ async function drawJustSoldTemplate(canvas, ctx) {
   ctx.font = 'bold 34px "Montserrat", sans-serif';
   ctx.fillStyle = CREAM;
   ctx.fillText('GATEWAY', 60, 66);
-  ctx.font = '400 12px "Montserrat", sans-serif';
+  ctx.font = '700 15px "Montserrat", sans-serif';
   ctx.fillStyle = LABEL;
-  ctx.fillText('REAL ESTATE ADVISORS', 60, 86);
+  ctx.fillText('REAL ESTATE ADVISORS', 60, 88);
 
   // ── Just Sold price box (top right) ─────────────────────────────────────
   // Give it proper internal padding — text sits comfortably inside the border
@@ -4325,12 +4325,12 @@ async function drawJustSoldTemplate(canvas, ctx) {
   var boxH  = offMkt ? lineOffMkt + 16 : linePrice + 14;
   var boxY  = 20;                              // 20px from top (below the 6px accent bar)
 
-  ctx.strokeStyle = GOLD;
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#CC2200';
+  ctx.lineWidth = 2;
   ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-  ctx.font = '600 12px "Montserrat", sans-serif';
-  ctx.fillStyle = LABEL;
+  ctx.font = '800 15px "Montserrat", sans-serif';
+  ctx.fillStyle = '#CC2200';
   ctx.textAlign = 'center';
   ctx.fillText('JUST SOLD', boxX + boxW / 2, boxY + lineJustSold);
 
